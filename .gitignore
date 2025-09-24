@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+# Spark / 临时
+.derby/
+.metastore_db/
+spark-warehouse/
+*.crc
+out/
+logs/
+
+# 数据与模型
+data/
+*.parquet
+*.csv
+*.jpg
+*.png
+models/
