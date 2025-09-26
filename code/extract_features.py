@@ -1,27 +1,23 @@
-"""
-extract_features.py
---------------------
-Purpose:
-    Read a manifest CSV file (path,label), compute handcrafted image features 
-    (HSV histograms + gradient magnitude histogram), normalize them, 
-    and save the results into a Parquet dataset.
+# Purpose:
+#     Read a manifest CSV file (path,label), compute handcrafted image features 
+#     (HSV histograms + gradient magnitude histogram), normalize them, 
+#     and save the results into a Parquet dataset.
 
-Input:
-    out/manifest.csv   (columns: path, label)
+# Input:
+#     out/manifest.csv   (columns: path, label)
 
-Output:
-    C:/spark_out/features_parquet
-    (columns: path, label, features[array<float>])
+# Output:
+#     C:/spark_out/features_parquet
+#     (columns: path, label, features[array<float>])
 
-Notes:
-    - Uses OpenCV (cv2) to read and process images directly from disk.
-    - Features are 128-dimensional vectors:
-        * H histogram (32 bins)
-        * S histogram (32 bins)
-        * V histogram (32 bins)
-        * Gradient magnitude histogram (32 bins)
-    - Each feature vector is L2-normalized.
-"""
+# Notes:
+#     - Uses OpenCV (cv2) to read and process images directly from disk.
+#     - Features are 128-dimensional vectors:
+#         * H histogram (32 bins)
+#         * S histogram (32 bins)
+#         * V histogram (32 bins)
+#         * Gradient magnitude histogram (32 bins)
+#     - Each feature vector is L2-normalized.
 
 from pyspark.sql import SparkSession, functions as F, types as T
 import sys, numpy as np, cv2
@@ -63,13 +59,13 @@ log(f"manifest rows={man.count()}")
 # 3) Feature extraction UDF
 # -----------------------------------------------------------
 def featurize_path(p: str):
-    """
-    Load image from disk and compute a 128-D feature vector:
-    - 32-bin histogram of Hue (HSV)
-    - 32-bin histogram of Saturation (HSV)
-    - 32-bin histogram of Value (HSV)
-    - 32-bin histogram of gradient magnitude (like LBP-ish)
-    """
+    
+    # Load image from disk and compute a 128-D feature vector:
+    # - 32-bin histogram of Hue (HSV)
+    # - 32-bin histogram of Saturation (HSV)
+    # - 32-bin histogram of Value (HSV)
+    # - 32-bin histogram of gradient magnitude (like LBP-ish)
+   
     try:
         im = cv2.imread(p)  # Load image in BGR
         if im is None:
