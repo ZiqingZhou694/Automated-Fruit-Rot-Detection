@@ -29,9 +29,7 @@ for img in ROOT.rglob("*"):
     if img.is_file() and img.suffix.lower() in EXTS:
         label = infer_label(img.parent)
         if label:
-            # 构造新的路径（把空格替换成下划线）
             safe_path = pathlib.Path(str(img).replace(" ", "_"))
-            # 如果 safe_path 和原始文件不同，就复制一份
             if safe_path != img:
                 safe_path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(img, safe_path)
