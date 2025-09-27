@@ -16,7 +16,6 @@ out/
 logs/
 
 # 数据与模型
-data/
 *.parquet
 *.csv
 *.jpg
