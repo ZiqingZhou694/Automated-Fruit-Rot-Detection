@@ -1,13 +1,13 @@
 # Purpose:
-#     Read a manifest CSV file (path,label), compute handcrafted image features 
-#     (HSV histograms + gradient magnitude histogram), normalize them, 
+#     Read a manifest CSV file (path,label), compute handcrafted image features
+#     (HSV histograms + gradient magnitude histogram), normalize them,
 #     and save the results into a Parquet dataset.
 
 # Input:
 #     out/manifest.csv   (columns: path, label)
 
 # Output:
-#     C:/spark_out/features_parquet
+#     out/features_parquet
 #     (columns: path, label, features[array<float>])
 
 # Notes:
@@ -20,13 +20,17 @@
 #     - Each feature vector is L2-normalized.
 
 from pyspark.sql import SparkSession, functions as F, types as T
-import sys, numpy as np, cv2
+import sys
+import numpy as np
+import cv2
 
-OUT_PARQUET = "C:/spark_out/features_parquet"
+OUT_PARQUET = "./out/features_parquet"
 
-def log(msg): 
+
+def log(msg):
     """Helper logger for nicer output."""
     print(f"\n=== {msg} ===")
+
 
 # -----------------------------------------------------------
 # 1) Initialize Spark session
@@ -35,10 +39,10 @@ spark = (
     SparkSession.builder
     .appName("fruit-feature-extract-from-disk")
     .master("local[*]")                          # Use all local cores
-    .config("spark.driver.memory","6g")          # Driver memory
-    .config("spark.sql.shuffle.partitions","8")  # Reduce shuffle partitions
-    .config("spark.hadoop.hadoop.home.dir","C:/hadoop")
-    .config("spark.hadoop.io.native.lib.available","false")
+    .config("spark.driver.memory", "6g")          # Driver memory
+    .config("spark.sql.shuffle.partitions", "8")  # Reduce shuffle partitions
+    .config("spark.hadoop.hadoop.home.dir", "C:/hadoop")
+    .config("spark.hadoop.io.native.lib.available", "false")
     # Force PySpark to use the same Python interpreter as current process
     .config("spark.pyspark.python", sys.executable)
     .config("spark.pyspark.driver.python", sys.executable)
@@ -51,44 +55,47 @@ spark = (
 man = (
     spark.read.option("header", True)
     .csv("out/manifest.csv")
-    .dropna(subset=["path","label"])  # drop rows with missing path/label
+    .dropna(subset=["path", "label"])  # drop rows with missing path/label
 )
 log(f"manifest rows={man.count()}")
 
 # -----------------------------------------------------------
 # 3) Feature extraction UDF
 # -----------------------------------------------------------
+
+
 def featurize_path(p: str):
-    
+
     # Load image from disk and compute a 128-D feature vector:
     # - 32-bin histogram of Hue (HSV)
     # - 32-bin histogram of Saturation (HSV)
     # - 32-bin histogram of Value (HSV)
     # - 32-bin histogram of gradient magnitude (like LBP-ish)
-   
+
     try:
         im = cv2.imread(p)  # Load image in BGR
         if im is None:
             return [0.0] * 128
-        
+
         # Resize for consistency
-        im = cv2.resize(im, (224,224))
+        im = cv2.resize(im, (224, 224))
 
         # HSV histograms
         hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
-        h = cv2.calcHist([hsv],[0],None,[32],[0,180]).flatten()
-        s = cv2.calcHist([hsv],[1],None,[32],[0,256]).flatten()
-        v = cv2.calcHist([hsv],[2],None,[32],[0,256]).flatten()
+        h = cv2.calcHist([hsv], [0], None, [32], [0, 180]).flatten()
+        s = cv2.calcHist([hsv], [1], None, [32], [0, 256]).flatten()
+        v = cv2.calcHist([hsv], [2], None, [32], [0, 256]).flatten()
 
         # Gradient magnitude histogram
         gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-        gx  = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
-        gy  = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
+        gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
+        gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
         mag = np.sqrt(gx*gx + gy*gy)
-        lbp_hist, _ = np.histogram(mag.ravel(), bins=32, range=(0,255))
+        lbp_hist, _ = np.histogram(mag.ravel(), bins=32, range=(0, 255))
 
         # Concatenate to 128-D
-        feat = np.concatenate([h, s, v, lbp_hist.astype(np.float32)]).astype(np.float32)
+        feat = np.concatenate(
+            [h, s, v, lbp_hist.astype(np.float32)]).astype(np.float32)
 
         # L2 normalization
         nrm = np.linalg.norm(feat)
@@ -97,13 +104,14 @@ def featurize_path(p: str):
         # Any failure → return zero vector
         return [0.0] * 128
 
+
 # Register UDF in Spark
 featurize_udf = F.udf(featurize_path, T.ArrayType(T.FloatType()))
 
 log("compute features (from disk)")
 feat_df = (
     man.withColumn("features", featurize_udf(F.col("path")))
-       .select("path","label","features")
+       .select("path", "label", "features")
 )
 
 # -----------------------------------------------------------
@@ -112,7 +120,7 @@ feat_df = (
 log("write parquet")
 (
     feat_df.repartition(8)   # balance data across 8 partitions
-          .write.mode("overwrite")
+    .write.mode("overwrite")
           .partitionBy("label")  # partition by label for efficiency
           .parquet(OUT_PARQUET)
 )
