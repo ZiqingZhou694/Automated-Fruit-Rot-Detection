@@ -27,8 +27,7 @@ import cv2
 OUT_PARQUET = "./out/features_parquet"
 
 
-def log(msg):
-    """Helper logger for nicer output."""
+def log(msg):  # printf but with more style
     print(f"\n=== {msg} ===")
 
 
@@ -37,7 +36,7 @@ def log(msg):
 # -----------------------------------------------------------
 spark = (
     SparkSession.builder
-    .appName("fruit-feature-extract-from-disk")
+    .appName("featrure_extraction")
     .master("local[*]")                          # Use all local cores
     .config("spark.driver.memory", "6g")          # Driver memory
     .config("spark.sql.shuffle.partitions", "8")  # Reduce shuffle partitions
