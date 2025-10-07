@@ -113,15 +113,25 @@ feat_df = (
     man.withColumn("features", featurize_udf(F.col("path")))
        .select("path", "label", "features")
 )
+# -----------------------------------------------------------
+# 4) Add train/test split column
+# -----------------------------------------------------------
+log("add train/test split")
+feat_df = feat_df.withColumn(
+    "split",
+    F.when(F.col("path").contains("\\train\\"), "train")
+     .otherwise("test")
+)
 
 # -----------------------------------------------------------
-# 4) Write Parquet output
+# 5) Write Parquet output
 # -----------------------------------------------------------
 log("write parquet")
 (
     feat_df.repartition(8)   # balance data across 8 partitions
     .write.mode("overwrite")
-          .partitionBy("label")  # partition by label for efficiency
+    # split directory by split first then label
+          .partitionBy("split", "label")
           .parquet(OUT_PARQUET)
 )
 
