@@ -31,6 +31,7 @@ Before running any script, you must set PySpark to use your Python 3.11 interpre
 ```powershell
 $env:PYSPARK_PYTHON = (py -3.11 -c "import sys; print(sys.executable)")
 $env:PYSPARK_DRIVER_PYTHON = $env:PYSPARK_PYTHON
+```
 
 ## 🧩 Steps to Run
 
@@ -38,10 +39,11 @@ $env:PYSPARK_DRIVER_PYTHON = $env:PYSPARK_PYTHON
 
 ```powershell
 py code\manifest.py
+```
 
 ### Feature Extraction
 
 ```powershell
 py code\extract_features.py
-
+```
 
