@@ -66,6 +66,32 @@ py code\model_test.py "local image"
 ```
 
 Example (image URL):
+
+Fresh:
  ```powershell
-py code\model_test.py "https://upload.wikimedia.org/wikipedia/commons/1/15/Red_Apple.jpg"
+py code\model_test.py "https://i5.walmartimages.com/seo/Fresh-Envy-Apples-Each_32451a10-0563-426a-9a16-a8865b2c3774_3.b3be01fcc4c956f51fe3890589897d31.jpeg"
+```
+
+ ```powershell
+py code\model_test.py "https://tiimg.tistatic.com/fp/1/007/291/natural-fresh-orange-fruit-411.jpg"
+```
+
+```powershell
+py code\model_test.py "https://s3.amazonaws.com/grocery-project/product_images/clementine-6762922-2.jpeg"
+```
+```powershell
+py code\model_test.py "https://i5.walmartimages.com/seo/Fresh-Banana-Each_5939a6fa-a0d6-431c-88c6-b4f21608e4be.f7cd0cc487761d74c69b7731493c1581.jpeg"
+```
+
+Rotten:
+ ```powershell
+py code\model_test.py "https://i1.sndcdn.com/artworks-9MBM0YJZia5Kb4OS-yGmyxw-t500x500.jpg"
+```
+
+ ```powershell
+py code\model_test.py "https://images.stockcake.com/public/b/3/9/b39ce5ab-e625-4a6b-954e-754e0ab08dab_large/rotten-red-apple-stockcake.jpg"
+```
+
+ ```powershell
+py code\model_test.py "https://media.istockphoto.com/id/520613602/photo/rotten-and-moldy-orange.jpg?s=612x612&w=0&k=20&c=NTg0uiZakxLhSbNSAmK7jPm4sdhNzSQ412gPSG5gxDA="
 ```

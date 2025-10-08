@@ -268,6 +268,14 @@ random_forest = RandomForestClassifier(
     seed=0  # arbitrary seed for reproducibility
 )
 
+# random_forest = RandomForestClassifier(
+#     featuresCol="features",
+#     labelCol="true_value",
+#     subsamplingRate=0.8,                 # Random the sampling
+#     featureSubsetStrategy="sqrt",        # every split only looks at part of the features
+#     seed=0
+# )
+
 pipeline = Pipeline(stages=[indexer, random_forest])
 
 # ===== Fine-tuning: (TrainValidationSplit) =====
@@ -279,12 +287,20 @@ evaluator = MulticlassClassificationEvaluator(
     predictionCol="prediction",
     metricName="accuracy"
 )
+
 # Define parameter grid for tuning
+# paramGrid = (ParamGridBuilder()
+#              .addGrid(random_forest.numTrees, [100, 200, 300])
+#              .addGrid(random_forest.maxDepth, [8, 10, 12])
+#              .addGrid(random_forest.maxBins,  [32, 64])
+#              .build())
+
 paramGrid = (ParamGridBuilder()
-             .addGrid(random_forest.numTrees, [100, 200, 300])
-             .addGrid(random_forest.maxDepth, [8, 10, 12])
-             .addGrid(random_forest.maxBins,  [32, 64])
-             .build())
+    .addGrid(random_forest.numTrees, [100, 200])
+    .addGrid(random_forest.maxDepth, [6, 8, 10])      
+    .addGrid(random_forest.minInstancesPerNode, [1, 5, 10])
+    .addGrid(random_forest.maxBins, [32, 64])
+    .build())
 
 tvs = TrainValidationSplit(
     estimator=pipeline,
@@ -294,10 +310,26 @@ tvs = TrainValidationSplit(
     parallelism=2
 )
 
+# # change tvs to crossValidator(k=5)
+# from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+# cv = CrossValidator(
+#     estimator=pipeline,
+#     estimatorParamMaps=paramGrid,
+#     evaluator=evaluator,
+#     numFolds=5,
+#     parallelism=2
+# )
+# cv_model = cv.fit(train_dataset)
+# best_model = cv_model.bestModel
+
+
 log("grid search training (RF)…")
-train_dataset = train_dataset.cache(); test_dataset = test_dataset.cache()
-train_dataset.count(); test_dataset.count()  # Force caching
+train_dataset = train_dataset.cache()
+test_dataset = test_dataset.cache()
+train_dataset.count()
+test_dataset.count()  # Force caching
 tvs_model = tvs.fit(train_dataset)
+# cv_model = cv.fit(train_dataset)
 
 # Retrieve best model
 best_model = tvs_model.bestModel
@@ -365,6 +397,7 @@ print(f"Best RF -> maxBins   : {max_bins}")
 print(f"Test Accuracy        : {accuracy*100:.2f}%")
 print(f"F1 Score             : {f1:.4f}")
 print(f"Model saved          : {MODEL_STORAGE_PATH}")
+print("Label order:", labels)
 
 spark.stop()
 print("\nPROGRAM COMPLETE")
