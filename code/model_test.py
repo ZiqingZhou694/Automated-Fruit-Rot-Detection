@@ -15,6 +15,7 @@
 from pyspark.sql import SparkSession, functions as F, types as T
 from pyspark.ml import PipelineModel
 from pyspark.ml.linalg import Vectors, VectorUDT
+import os, sys, urllib.request, contextlib, tempfile
 import sys
 import numpy as np
 import cv2
@@ -28,13 +29,32 @@ MODEL_PATH = "./out/model"
 def log(msg):  # printf but with more style
     print(f"\n=== {msg} ===")
 
+def is_url(s: str) -> bool:
+    return s.lower().startswith(("http://", "https://"))
 
-def download_image(url):
-    """Download image from URL."""
+def download_image(url: str) -> str:
+    """Download image from URL with a browser-like User-Agent to avoid 403."""
     log("downloading image from URL...")
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-    urllib.request.urlretrieve(url, temp_file.name)
-    return temp_file.name
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/124.0 Safari/537.36"
+        },
+    )
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+    with contextlib.closing(urllib.request.urlopen(req, timeout=20)) as resp, open(tmp.name, "wb") as f:
+        f.write(resp.read())
+    return tmp.name
+
+
+# def download_image(url):
+#     """Download image from URL."""
+#     log("downloading image from URL...")
+#     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+#     urllib.request.urlretrieve(url, temp_file.name)
+#     return temp_file.name
 
 
 def extract_features(image_path):  # using extract_features.py as a template
@@ -66,12 +86,26 @@ def extract_features(image_path):  # using extract_features.py as a template
 
 
 # check for image URL argument
+# if len(sys.argv) < 2:
+#     print("ERROR: Please provide an image URL")
+#     print("Usage: python model_test.py <image_url>")
+#     sys.exit(1)
+
+# image_url = sys.argv[1]
+
 if len(sys.argv) < 2:
-    print("ERROR: Please provide an image URL")
-    print("Usage: python model_test.py <image_url>")
+    print("ERROR: Please provide an image URL or local file path")
+    print('Usage:  py code/model_test.py "<url-or-local-path>"')
     sys.exit(1)
 
-image_url = sys.argv[1]
+src = sys.argv[1]
+if is_url(src):
+    image_path = download_image(src)
+else:
+    if not os.path.isfile(src):
+        print(f"ERROR: file not found: {src}")
+        sys.exit(1)
+    image_path = src
 
 # initialize spark
 log("initializing spark...")
@@ -88,7 +122,7 @@ spark = (
 )
 
 # download and extract features
-image_path = download_image(image_url)
+# image_path = download_image(image_url)
 log("extracting features...")
 features = extract_features(image_path)
 
@@ -118,18 +152,33 @@ probabilities = result["probability"].toArray()
 
 # map prediction to label
 # i flipped this because when the model was trained with fresh=1, rotten=0 the results almost seemed to be the opposite. todo if need be
-label_map = {0: "rotten", 1: "fresh"}
-predicted_label = label_map.get(prediction_idx, "unknown")
+# label_map = {0: "rotten", 1: "fresh"}
+# predicted_label = label_map.get(prediction_idx, "unknown")
+# confidence = probabilities[prediction_idx] * 100
+
+# modified
+import json, os
+labels_path = os.path.join(MODEL_PATH, "labels.json")
+with open(labels_path) as f:
+    labels = json.load(f)  # e.g. ['rotten','fresh'] 或 ['fresh','rotten']
+
+predicted_label = labels[prediction_idx]
+# print(f"  {labels[0]}: {probabilities[0]*100:.2f}%")
+# print(f"  {labels[1]}: {probabilities[1]*100:.2f}%")
 confidence = probabilities[prediction_idx] * 100
+
 
 # display results
 log("PREDICTION RESULT")
-print(f"Image: {image_url}")
+# print(f"Image: {image_url}")
+print(f"Image: {image_path}")
 print(f"Prediction: {predicted_label.upper()}")
 print(f"Confidence: {confidence:.2f}%")
 print(f"\nProbabilities:")
-print(f"  Fresh:  {probabilities[0]*100:.2f}%")
-print(f"  Rotten: {probabilities[1]*100:.2f}%")
+# print(f"  Fresh:  {probabilities[0]*100:.2f}%")
+# print(f"  Rotten: {probabilities[1]*100:.2f}%")
+for i, lbl in enumerate(labels):
+    print(f"  {lbl}: {probabilities[i]*100:.2f}%")
 
 # cleanup
 os.unlink(image_path)
