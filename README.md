@@ -43,7 +43,29 @@ py code\manifest.py
 
 ### Feature Extraction
 
+Generate image feature data from your dataset:
+
 ```powershell
 py code\extract_features.py
 ```
+### Model Training
 
+Train a Random Forest classifier on extracted features:
+
+ ```powershell
+ py code\model.py
+```
+
+### Test Model on a Single Image
+
+You can use either a local file or an online image URL.
+
+Example (local file):
+ ```powershell
+py code\model_test.py "local image"
+```
+
+Example (image URL):
+ ```powershell
+py code\model_test.py "https://upload.wikimedia.org/wikipedia/commons/1/15/Red_Apple.jpg"
+```
