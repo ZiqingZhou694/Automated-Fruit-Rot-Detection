@@ -18,7 +18,7 @@ import sys
 # =============================
 HDFS_BASE = "hdfs://localhost:9000"
 # TRAINING_DATASET_PATH = f"{HDFS_BASE}/out/features_parquet/split=train"
-TESTING_DATASET_PATH  = f"{HDFS_BASE}/out/features_parquet/split=test"
+TESTING_DATASET_PATH  = f"{HDFS_BASE}/out/features_parquet/test"
 MODEL_STORAGE_PATH    = f"{HDFS_BASE}/out/model"
 
 # =============================

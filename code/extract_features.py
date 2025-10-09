@@ -52,7 +52,7 @@ def featurize_bytes(content):
         arr = np.frombuffer(content, np.uint8)
         im = cv2.imdecode(arr, cv2.IMREAD_COLOR)
         if im is None:
-            return [0.0]*128
+            return [0.0] * 128
 
         im = cv2.resize(im, (224, 224))
         hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
@@ -61,36 +61,6 @@ def featurize_bytes(content):
         v = cv2.calcHist([hsv], [2], None, [32], [0, 256]).flatten()
 
         gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-
-        # 2) contour mask from edges (no color threshold)
-        gb = cv2.GaussianBlur(gray, (5,5), 0)
-        edges = cv2.Canny(gb, 50, 150)
-        kernel = np.ones((5,5), np.uint8)
-        edges = cv2.dilate(edges, kernel, 1)
-        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel, 1)
-
-        cnts, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        mask = np.zeros_like(gray)
-        if cnts:
-            big = max(cnts, key=cv2.contourArea)
-            hull = cv2.convexHull(big)
-            cv2.drawContours(mask, [hull], -1, 255, -1)
-            # if too tiny area -> fallback to full image
-            if (mask>0).sum() < 0.02*mask.size:
-                mask[:] = 255
-        else:
-            mask[:] = 255
-
-        # 3) histograms (masked)
-        def hist(arr, bins, rng, m=None):
-            return cv2.calcHist([arr],[0],m,bins,rng).flatten().astype(np.float32)
-
-        h_hist  = hist(hsv[:,:,0], [24], [0,180], mask)              # 24
-        s_hist  = hist(hsv[:,:,1], [24], [0,256], mask)              # 24
-        v_hist  = hist(hsv[:,:,2], [24], [0,256], mask)              # 24
-        a_hist  = hist(Ac,         [16], [0,256], mask)              # 16
-        b_hist  = hist(Bc,         [16], [0,256], mask)              # 16
-
         gx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
         gy = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
         mag = np.sqrt(gx*gx + gy*gy)
