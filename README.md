@@ -46,7 +46,7 @@ py code\manifest.py
 Generate image feature data from your dataset:
 
 ```powershell
-py code\extract_features.py
+py code\parquet.py
 ```
 ### Model Training
 
