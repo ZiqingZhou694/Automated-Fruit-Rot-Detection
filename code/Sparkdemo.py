@@ -3,7 +3,7 @@
 from pyspark.sql import SparkSession, functions as F
 
 # HDFS base path (adjust username if needed)
-HDFS_BASE = "hdfs://localhost:9000"
+HDFS_BASE = "hdfs://archmaster:9000"
 OUT_PATH = f"{HDFS_BASE}/out/test_parquet_hdfs"
 
 # ------------------------------------------------------------
@@ -12,7 +12,7 @@ OUT_PATH = f"{HDFS_BASE}/out/test_parquet_hdfs"
 spark = (
     SparkSession.builder
     .appName("hdfs-demo")
-    .config("spark.hadoop.fs.defaultFS", "hdfs://localhost:9000")
+    .config("spark.hadoop.fs.defaultFS", "hdfs://archmaster:9000")
     .config("spark.driver.memory", "4g")
     .config("spark.sql.shuffle.partitions", "8")
     .config("spark.sql.execution.arrow.pyspark.enabled", "true")
