@@ -1,5 +1,5 @@
 # model.py
-# Author: Aidan Eiler, Ziqing Zhou
+# Author: Aidan Eiler, Ziqing Zhou, Jacob Rogers
 # Date: 10/10/2025
 # Purpose:
 #   Train a RandomForest model on image features stored in HDFS Parquet,
@@ -15,23 +15,17 @@ from pyspark.ml.linalg import Vectors, VectorUDT
 from pyspark.ml.tuning import ParamGridBuilder, TrainValidationSplit
 import sys
 
-# =============================
-# CONFIGURATION
-# =============================
+# Configurations
 HDFS_BASE = "hdfs://archmaster:9000"
 TRAINING_DATASET_PATH = f"{HDFS_BASE}/out/features_parquet/split=train"
 TESTING_DATASET_PATH  = f"{HDFS_BASE}/out/features_parquet/split=test"
 MODEL_STORAGE_PATH    = f"{HDFS_BASE}/out/model"
 
-# =============================
-# UTILITY LOG FUNCTION
-# =============================
+# Logging
 def log(msg):
     print(f"\n=== {msg} ===")
 
-# =============================
-# 1. Initialize Spark Session (YARN)
-# =============================
+# 1. Initialize Spark Session
 log("initializing Spark for YARN...")
 spark = (
     SparkSession.builder
@@ -48,9 +42,8 @@ spark = (
     .getOrCreate()
 )
 
-# =============================
+
 # 2. Load Train + Test Parquet from HDFS
-# =============================
 log("loading training dataset from HDFS...")
 train_df = spark.read.parquet(TRAINING_DATASET_PATH)
 train_count = train_df.count()
@@ -63,17 +56,13 @@ test_count = test_df.count()
 log(f"test samples: {test_count}")
 test_df.groupBy("label").count().show()
 
-# =============================
 # 3. Convert array<float> -> VectorUDT
-# =============================
 log("converting features to VectorUDT...")
 array_to_vector = F.udf(lambda arr: Vectors.dense(arr), VectorUDT())
 train_df = train_df.withColumn("features", array_to_vector(F.col("features")))
 test_df  = test_df.withColumn("features", array_to_vector(F.col("features")))
 
-# =============================
 # 4. Build ML pipeline
-# =============================
 log("building ML pipeline...")
 indexer = StringIndexer(inputCol="label", outputCol="true_value", handleInvalid="keep")
 rf = RandomForestClassifier(
@@ -84,9 +73,7 @@ rf = RandomForestClassifier(
 )
 pipeline = Pipeline(stages=[indexer, rf])
 
-# =============================
 # 5. Setup TrainValidationSplit (distributed grid search)
-# =============================
 log("setting up grid search for hyperparameter tuning...")
 evaluator = MulticlassClassificationEvaluator(
     labelCol="true_value",
@@ -108,26 +95,20 @@ tvs = TrainValidationSplit(
     parallelism=4  # distribute across YARN executors
 )
 
-# =============================
 # 6. Cache datasets
-# =============================
 log("caching datasets for distributed training...")
 train_df = train_df.cache()
 test_df  = test_df.cache()
 train_df.count()  # force caching
 test_df.count()
 
-# =============================
 # 7. Fit model
-# =============================
 log("training RandomForest with distributed grid search on YARN...")
 tvs_model = tvs.fit(train_df)
 best_model = tvs_model.bestModel
 rf_model = best_model.stages[1]
 
-# =============================
 # 8. Print best RF parameters
-# =============================
 num_trees = getattr(rf_model, "numTrees", len(getattr(rf_model, "trees", [])))
 max_depth = rf_model.getOrDefault(rf_model.maxDepth)
 max_bins  = rf_model.getOrDefault(rf_model.maxBins)
@@ -135,9 +116,7 @@ max_bins  = rf_model.getOrDefault(rf_model.maxBins)
 print("\n=== Best RandomForest Params ===")
 print(f"numTrees: {num_trees}, maxDepth: {max_depth}, maxBins: {max_bins}")
 
-# =============================
 # 9. Evaluate model on test set
-# =============================
 log("evaluating model on test set...")
 pred = best_model.transform(test_df)
 
@@ -154,9 +133,7 @@ print(f"F1 Score      : {f1:.4f}")
 log("confusion matrix:")
 pred.groupBy("true_value","prediction").count().orderBy("true_value","prediction").show()
 
-# =============================
 # 10. Save model + labels to HDFS
-# =============================
 log("saving model to HDFS...")
 best_model.write().overwrite().save(MODEL_STORAGE_PATH)
 
@@ -167,9 +144,7 @@ labels_rdd = spark.sparkContext.parallelize(labels)
 labels_df = spark.createDataFrame(labels_rdd.map(lambda l: Row(label=l)))
 labels_df.write.mode("overwrite").text(f"{MODEL_STORAGE_PATH}/labels.txt")
 
-# =============================
 # 11. Training Summary
-# =============================
 log("TRAINING SUMMARY")
 print(f"Training samples   : {train_count}")
 print(f"Test samples       : {test_count}")

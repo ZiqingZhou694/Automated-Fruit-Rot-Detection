@@ -1,13 +1,9 @@
-# =============================
 # Distributed 128-D Feature Extraction from HDFS images
-# =============================
 from pyspark.sql import SparkSession, functions as F, types as T
 import numpy as np
 import cv2
 
-# =============================
-# CONFIGURATION
-# =============================
+# Configuration
 HDFS_BASE = "hdfs://archmaster:9000"
 DATASET_PATHS = [f"{HDFS_BASE}/data/train/",
                  f"{HDFS_BASE}/data/test/"]
@@ -26,9 +22,7 @@ spark = (
 def log(msg):
     print(f"\n=== {msg} ===")
 
-# =============================
-# FEATURE EXTRACTION FUNCTION (HDFS bytes)
-# =============================
+# Featurization UDF
 def featurize_bytes(content):
     try:
         arr = np.frombuffer(content, np.uint8)
@@ -133,9 +127,7 @@ def featurize_bytes(content):
 
 featurize_udf = F.udf(featurize_bytes, T.ArrayType(T.FloatType()))
 
-# =============================
-# PROCESS TRAIN AND TEST
-# =============================
+# Load, featurize, label, and save
 all_dfs = []
 for dataset_path in DATASET_PATHS:
     log(f"loading images from {dataset_path}")

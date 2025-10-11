@@ -6,9 +6,7 @@ from pyspark.sql import SparkSession, functions as F
 HDFS_BASE = "hdfs://archmaster:9000"
 OUT_PATH = f"{HDFS_BASE}/out/test_parquet_hdfs"
 
-# ------------------------------------------------------------
-# 1. Initialize Spark
-# ------------------------------------------------------------
+# Initialize Spark session
 spark = (
     SparkSession.builder
     .appName("hdfs-demo")
@@ -25,18 +23,14 @@ print("Master:", spark.sparkContext.master)
 print("Default parallelism:", spark.sparkContext.defaultParallelism)
 print("Writing to HDFS path:", OUT_PATH)
 
-# ------------------------------------------------------------
 # 2. Create test DataFrame
-# ------------------------------------------------------------
 df = spark.range(1_000_000).withColumn("x", (F.rand() * 100).cast("float"))
 
 # Show sample
 print("\n=== Sample Data ===")
 df.show(5, truncate=False)
 
-# ------------------------------------------------------------
 # 3. Basic aggregation
-# ------------------------------------------------------------
 agg = df.agg(
     F.count("*").alias("n"),
     F.avg("x").alias("avg_x"),
@@ -45,9 +39,7 @@ agg = df.agg(
 print("\n=== Aggregation ===")
 agg.show(truncate=False)
 
-# ------------------------------------------------------------
 # 4. Write Parquet to HDFS
-# ------------------------------------------------------------
 print("\n=== Writing to HDFS... ===")
 (
     df.repartition(8)
@@ -58,9 +50,7 @@ print("\n=== Writing to HDFS... ===")
 
 print(f"✅ Successfully wrote Parquet to HDFS at {OUT_PATH}")
 
-# ------------------------------------------------------------
 # 5. Read back from HDFS
-# ------------------------------------------------------------
 print("\n=== Reading back from HDFS... ===")
 df2 = spark.read.parquet(OUT_PATH)
 print("✅ Successfully read from HDFS")
@@ -69,9 +59,7 @@ print("✅ Successfully read from HDFS")
 print("\n=== Row Count Verification ===")
 print("Rows written:", df.count(), " | Rows read:", df2.count())
 
-# ------------------------------------------------------------
 # 6. Group-by check
-# ------------------------------------------------------------
 print("\n=== Histogram buckets (x/10) ===")
 sample = (
     df2.withColumn("bucket", (F.col("x") / 10).cast("int"))
@@ -80,8 +68,5 @@ sample = (
 )
 sample.show(10, truncate=False)
 
-# ------------------------------------------------------------
-# 7. Done
-# ------------------------------------------------------------
 spark.stop()
 print("\n✅ HDFS test complete. Spark can read/write to HDFS correctly.")

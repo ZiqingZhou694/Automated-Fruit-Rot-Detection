@@ -1,7 +1,5 @@
-# model_test_hdfs.py
-# Purpose:
-#   Test the trained Random Forest model stored in HDFS on a single image (URL or local path)
-#   using the latest 128-D feature extraction.
+# Distributed model testing on HDFS-stored images. Supports local file paths and URLs.
+# Usage: ./bin/python model_test.py <image_url_or_local_path>
 
 from pyspark.sql import SparkSession, functions as F, types as T
 from pyspark.ml import PipelineModel
@@ -9,22 +7,14 @@ from pyspark.ml.linalg import Vectors, VectorUDT
 import os, sys, urllib.request, contextlib, tempfile
 import numpy as np
 import cv2
-import json
 
-# =============================
-# CONFIGURATION
-# =============================
+# Configuration
 MODEL_PATH = "hdfs://archmaster:9000/out/model"
 
-# =============================
-# LOGGING
-# =============================
 def log(msg):
     print(f"\n=== {msg} ===")
 
-# =============================
-# URL UTILITIES
-# =============================
+# URL handling
 def is_url(s: str) -> bool:
     return s.lower().startswith(("http://", "https://"))
 
@@ -44,17 +34,14 @@ def download_image(url: str) -> str:
         f.write(resp.read())
     return tmp.name
 
-# =============================
-# FEATURE EXTRACTION (128-D, latest)
-# =============================
+# Feature extraction with UDF
 def extract_features(image_path: str):
     """Extract 128-D feature vector with latest improvements."""
     try:
         im = cv2.imread(image_path)
         if im is None:
             return [0.0]*128
-
-        # 0) resize
+        
         im = cv2.resize(im, (224, 224))
 
         # --- border trim ---
@@ -140,9 +127,7 @@ def extract_features(image_path: str):
     except Exception:
         return [0.0]*128
 
-# =============================
-# MAIN
-# =============================
+# Main program
 if len(sys.argv)<2:
     print("Usage: spark-submit model_test_hdfs.py <image_url_or_local_path>")
     sys.exit(1)
